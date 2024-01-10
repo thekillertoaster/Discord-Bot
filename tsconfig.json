@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",    // Output directory for compiled files
+    "rootDir": "./src",    // Root directory for TypeScript files
+    "strict": true,        // Enable strict type-checking options
+    "module": "CommonJS",  // Specify module code generation
+    "target": "ESNext",    // Specify ECMAScript target version
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+  },
+  "include": ["src/**/*"] , // Include all files in the src directory
+}
