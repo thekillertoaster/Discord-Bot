@@ -2,5 +2,5 @@
   "watch": ["src"],
   "ext": "ts,html,png",
   "ignore": ["src/**/*.spec.ts"],
-  "exec": "shx mkdir ./dist && shx cp ./.env ./dist/.env && npm run build"
+  "exec": "shx cp ./.env ./dist/.env && npm run build"
 }
