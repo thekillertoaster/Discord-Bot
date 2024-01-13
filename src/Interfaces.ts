@@ -1,4 +1,10 @@
-import { CommandInteraction } from 'discord.js';
+import { Client, CommandInteraction } from 'discord.js';
+import { VoiceConnection } from "@discordjs/voice";
+
+interface BotClient extends Client {
+    commands: Map<string, Command>;
+    voiceConnection: Map<string, VoiceConnection>;
+}
 
 // Define an interface for the command
 interface Command {
@@ -6,8 +12,8 @@ interface Command {
         name: string;
         description: string;
     };
-    execute: (interaction: CommandInteraction) => Promise<void>;
+    execute: ( interaction: CommandInteraction, client: BotClient ) => Promise<void>;
 }
 
-// Export the interface
 export default Command;
+export type { BotClient };

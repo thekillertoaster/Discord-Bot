@@ -2,11 +2,15 @@ import fs from 'fs';
 import { Client, GatewayIntentBits, Interaction, REST, Routes } from 'discord.js';
 import path from 'node:path';
 import { config } from 'dotenv';
+import VoiceToResponse from "./modules/VoiceToResponse";
+import { VoiceConnection } from "@discordjs/voice";
+import { addSpeechEvent } from "discord-speech-recognition";
 
 config();
 
 class BotClient extends Client {
     commands = new Map<string, any>();
+    voiceConnection = new Map<string, VoiceConnection>();
 }
 
 const client = new BotClient( {
@@ -18,10 +22,12 @@ const client = new BotClient( {
         GatewayIntentBits.MessageContent,
     ],
 } );
+addSpeechEvent( client );
 
 const token = process.env.TOKEN!;
 const clientId = process.env.CLIENT_ID!;
 const guildId = process.env.GUILD_ID!;
+const openAIKey = process.env.OPENAI_API_KEY!;
 
 async function getCommandFiles( dir: string ): Promise<string[]> {
     const files = await fs.promises.readdir( dir );
@@ -65,7 +71,7 @@ async function interactionCreateListener( interaction: Interaction ) {
     const command = client.commands.get( interaction.commandName );
     if ( command ) {
         try {
-            await command.execute( interaction );
+            await command.execute( interaction, client );
         } catch ( error ) {
             console.error( error );
             if ( !interaction.replied ) {
@@ -83,3 +89,9 @@ async function main() {
 }
 
 main().catch( console.error );
+
+// voice to response module
+const VoiceToResponseInstance = new VoiceToResponse( client, {
+    apiKey: openAIKey,
+} );
+VoiceToResponseInstance.registerVoiceEvents();
