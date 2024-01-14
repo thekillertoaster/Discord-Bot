@@ -115,6 +115,7 @@ class VoiceToResponse {
                 } );
             }
         } );
+        console.log( 'VoiceToResponse module registered' );
     }
 }
 

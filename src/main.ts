@@ -15,12 +15,12 @@ const openAIKey = process.env.OPENAI_API_KEY!;
 
 async function main() {
     await client.start( token, clientId, guildId )
+
+    // Voice To Response Module
+    const VoiceToResponseInstance = new VoiceToResponse( client, {
+        apiKey: openAIKey,
+    } );
+    VoiceToResponseInstance.registerVoiceEvents();
 }
 
 main().catch( console.error );
-
-// voice to response module
-const VoiceToResponseInstance = new VoiceToResponse( client, {
-    apiKey: openAIKey,
-} );
-VoiceToResponseInstance.registerVoiceEvents();
