@@ -1,7 +1,7 @@
 import { BotClient } from "../Interfaces";
 import fs from "fs";
 import path from "node:path";
-import { Interaction, REST, Routes } from "discord.js";
+import { Interaction, REST, Routes, Snowflake } from "discord.js";
 
 class CommandHandler {
     client: BotClient;
@@ -25,8 +25,8 @@ class CommandHandler {
         return commandFiles;
     }
 
-    async registerCommands( token: string, clientId: string, guildId: string ): Promise<void> {
-        const commandFiles = await this.getCommandFiles( './commands' );
+    async registerCommands( token: string, clientId: string, guildId: string, commandDir?: string ): Promise<boolean> {
+        const commandFiles = await this.getCommandFiles( commandDir ?? './commands' );
 
         for ( const file of commandFiles ) {
             console.log( 'Loading command', file );
@@ -37,16 +37,21 @@ class CommandHandler {
         const commands = Array.from( this.client.commands.values() ).map( cmd => cmd.data );
         const rest = new REST( { version: '10' } ).setToken( token );
 
+        const clientIdSnowflake: Snowflake = clientId as Snowflake;
+        const guildIdSnowflake: Snowflake = guildId as Snowflake;
+
         try {
             console.log( 'Started refreshing application (/) commands.' );
-            await rest.put( Routes.applicationGuildCommands( clientId, guildId ), { body: commands } );
+            await rest.put( Routes.applicationGuildCommands( clientIdSnowflake, guildIdSnowflake ), { body: commands } );
             console.log( 'Successfully reloaded application (/) commands.' );
+            return true;
         } catch ( error ) {
             console.error( error );
+            return false;
         }
     }
 
-    async interactionCreateListener( interaction: Interaction ) {
+    async interactionCreateListener( interaction: Interaction ): Promise<void> {
         if ( !interaction.isCommand() ) return;
 
         const command = this.client.commands.get( interaction.commandName );

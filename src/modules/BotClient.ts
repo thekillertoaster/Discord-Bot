@@ -24,7 +24,8 @@ class BotClient extends Client {
         this.on( 'ready', () => console.log( 'Bot is ready!' ) );
         this.on( 'interactionCreate', ( interaction ) => this.commandHandler.interactionCreateListener( interaction ) );
         await this.login( token );
-        await this.commandHandler.registerCommands( token, clientId, guildId )
+        const commandStatus = await this.commandHandler.registerCommands( token, clientId, guildId )
+        console.log( commandStatus ? "Successfully registered commands" : "Failed to register commands" )
     }
 }
 
