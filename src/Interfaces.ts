@@ -6,7 +6,6 @@ interface BotClient extends Client {
     voiceConnection: Map<string, VoiceConnection>;
 }
 
-// Define an interface for the command
 interface Command {
     data: {
         name: string;
