@@ -10,6 +10,12 @@ interface Command {
     data: {
         name: string;
         description: string;
+        options?: {
+            name: string;
+            description: string;
+            type: number;
+            required?: boolean;
+        }[];
     };
     execute: ( interaction: CommandInteraction, client: BotClient ) => Promise<void>;
 }
