@@ -59,10 +59,11 @@ class CommandHandler {
             try {
                 await command.execute( interaction, this.client );
             } catch ( error ) {
+                const errorString = error as string;
                 console.error( error );
                 if ( !interaction.replied ) {
                     await interaction.reply( {
-                        content: 'There was an error executing that command!',
+                        content: `Error: ${ errorString || "unknown error" }`,
                         ephemeral: true
                     } );
                 }
