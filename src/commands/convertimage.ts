@@ -22,32 +22,55 @@ const command: Command = {
         ],
     },
 
-    async execute( interaction ) {
-        const imageMagick = new ImageMagick();
+    async execute( interaction ): Promise<void> {
+        return new Promise( async ( resolve, reject ) => {
+            try {
+                await interaction.deferReply( { ephemeral: false })
+                const imageMagick = new ImageMagick();
 
-        // @ts-ignore
-        const image = interaction.options.getAttachment( 'image' );
+                // @ts-ignore
+                const image = interaction.options.getAttachment( 'image' );
 
-        // @ts-ignore
-        const type: string = interaction.options.getString( 'type' );
+                // @ts-ignore
+                const type: string = interaction.options.getString( 'type' );
 
-        const convertedImagePath = await imageMagick.convert( image.url, type ).catch( async ( error ) => {
-            await interaction.reply( {
-                content: `Error: ${ error || "unknown error" }`,
-                ephemeral: true
-            } );
-            return;
-        } ) as string;
+                const convertedImagePath = await imageMagick.convert( image.url, type );
 
-        if ( !convertedImagePath ) return;
+                if ( !convertedImagePath ) {
+                    reject("error");
+                    return;
+                }
 
-        // generate a new discord reply with the converted image
-        await interaction.reply( {
-            files: [ convertedImagePath ],
+                console.log("attempting to reply")
+
+                // generate a new discord reply with the converted image
+                try {
+                    if ( !interaction.replied && !interaction.deferred ) {
+                        await interaction.reply( {
+                            files: [ convertedImagePath ],
+                        } );
+                    } else if ( interaction.deferred ) {
+                        await interaction.followUp( {
+                            files: [ convertedImagePath ],
+                        } );
+                    } else {
+                        await interaction.editReply( {
+                            files: [ convertedImagePath ],
+                        } );
+                    }
+                } catch ( error ) {
+                    reject( error );
+                    return;
+                }
+
+                // delete the converted image from the filesystem post-reply
+                fs.unlinkSync( convertedImagePath )
+                resolve();
+            } catch ( error ) {
+                reject( error );
+                return;
+            }
         } );
-
-        // delete the converted image from the filesystem post-reply
-        fs.unlinkSync( convertedImagePath )
     },
 };
 

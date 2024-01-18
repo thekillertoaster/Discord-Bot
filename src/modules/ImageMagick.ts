@@ -26,7 +26,6 @@ interface dimensionLimits {
 }
 
 interface imageDownloadReturn {
-    success: boolean,
     filename: string,
     fileDetails: {
         width: number,
@@ -98,6 +97,7 @@ class ImageMagick {
 
             // validate against input dimensions
             if ( !this.validateDimensions( downloadedImage.fileDetails.width, downloadedImage.fileDetails.height, 'input' ) ) {
+                fs.unlinkSync( downloadedImage.filename );
                 reject( 'Invalid dimensions' );
                 return;
             }
@@ -118,6 +118,7 @@ class ImageMagick {
 
             exec( `${ this.command } convert ${ filename } ${ convertedFilename }`, ( error ) => {
                 if ( error ) {
+                    fs.unlinkSync( downloadedImage.filename );
                     reject( error );
                     return;
                 }
@@ -179,7 +180,6 @@ class ImageMagick {
             filename = `${ filename }.${ extension }`;
 
             resolve( {
-                success: true,
                 filename: filename,
                 fileDetails: await this.getFileDetails( filename ) as {
                     width: number,

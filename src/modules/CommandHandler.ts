@@ -60,11 +60,21 @@ class CommandHandler {
                 await command.execute( interaction, this.client );
             } catch ( error ) {
                 const errorString = error as string;
-                console.error( error );
-                if ( !interaction.replied ) {
+                const content = `Error: ${ errorString || "unknown error" }`
+                console.error( `ICL: ${ error }` );
+                if ( !interaction.replied && !interaction.deferred ) {
                     await interaction.reply( {
-                        content: `Error: ${ errorString || "unknown error" }`,
+                        content: content,
                         ephemeral: true
+                    } );
+                } else if ( interaction.deferred ) {
+                    await interaction.followUp( {
+                        content: content,
+                        ephemeral: true
+                    } );
+                } else {
+                    await interaction.editReply( {
+                        content: content,
                     } );
                 }
             }
