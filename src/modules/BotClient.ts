@@ -1,13 +1,15 @@
 import { Client, GatewayIntentBits } from "discord.js";
 import { VoiceConnection } from "@discordjs/voice";
 import CommandHandler from "./CommandHandler";
+import { DataSource } from "typeorm";
 
 class BotClient extends Client {
     commands = new Map<string, any>();
     voiceConnection = new Map<string, VoiceConnection>();
     commandHandler: CommandHandler;
+    appDataSource: DataSource;  // TypeORM DataSource
 
-    constructor() {
+    constructor( dataSource: DataSource ) {
         super( {
             intents: [
                 GatewayIntentBits.Guilds,
@@ -18,6 +20,7 @@ class BotClient extends Client {
             ],
         } );
         this.commandHandler = new CommandHandler( this ); // Initialize CommandHandler
+        this.appDataSource = dataSource;
     }
 
     async start( token: string, clientId: string, guildId: string ): Promise<void> {

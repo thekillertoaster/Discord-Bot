@@ -7,6 +7,8 @@
     "target": "ESNext",    // Specify ECMAScript target version
     "esModuleInterop": true,
     "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
   },
   "include": ["src/**/*"] , // Include all files in the src directory
 }
