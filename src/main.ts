@@ -7,7 +7,7 @@ import { DataSource } from "typeorm";
 
 config();
 
-
+// Environment Variables
 const token = process.env.TOKEN!;
 const clientId = process.env.CLIENT_ID!;
 const guildId = process.env.GUILD_ID!;
@@ -18,7 +18,7 @@ const appDBUser = process.env.DB_USER!;
 const appDBPassword = process.env.DB_PASSWORD!;
 const appDBName = process.env.DB_NAME!;
 
-// entities
+// Entities
 import { SupportTicket } from "./entity/SupportTicket";
 
 async function configureDB(): Promise<DataSource> {
@@ -29,7 +29,9 @@ async function configureDB(): Promise<DataSource> {
             username: appDBUser,
             password: appDBPassword,
             database: appDBName,
-            entities: [ SupportTicket ],
+            entities: [
+                SupportTicket
+            ],
             synchronize: true,
             logging: true,
             entityPrefix: "app_",
