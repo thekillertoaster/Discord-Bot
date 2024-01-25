@@ -1,9 +1,4 @@
-import {
-    GuildMember,
-    PermissionsBitField,
-    TextChannel,
-    CategoryChannel, EmbedBuilder, Colors, Guild
-} from "discord.js";
+import { CategoryChannel, Colors, EmbedBuilder, GuildMember, PermissionsBitField, TextChannel } from "discord.js";
 import { BotClient } from "../Interfaces";
 import { SupportTicket } from "../entity/SupportTicket";
 
@@ -128,7 +123,7 @@ class Administration {
                 const textChannel = channel as TextChannel;
                 const messages = await textChannel.messages.fetch();
 
-                const transcript: transcriptItem[] = [];
+                let transcript: transcriptItem[] = [];
 
                 messages.forEach( message => {
                     transcript.push( {
@@ -137,6 +132,8 @@ class Administration {
                         timestamp: message.createdTimestamp
                     } );
                 } );
+
+                transcript = transcript.filter( item => item.message !== "" );  // filter out empty messages
 
                 resolve( transcript );
                 return;
@@ -339,6 +336,10 @@ class Administration {
                         reject( error );
                         return;
                     } );
+
+                    if ( toSend.length > 1 ) {  // if there are more than 1 people in the ticket, delay between sending the transcript to each person
+                        await new Promise( resolve => setTimeout( resolve, 500 ) );  // delay to avoid burst rate limiting
+                    }
                 }
 
                 // delete the channel
