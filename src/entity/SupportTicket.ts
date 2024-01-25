@@ -9,6 +9,9 @@ export class SupportTicket {
     createdChannelID!: string
 
     @Column()
+    headerMessageID!: string
+
+    @Column()
     createdTimestamp!: number
 
     @Column()
