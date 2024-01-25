@@ -1,9 +1,13 @@
 import { Client, CommandInteraction } from 'discord.js';
 import { VoiceConnection } from "@discordjs/voice";
+import CommandHandler from "./modules/CommandHandler";
+import { DataSource } from "typeorm";
 
 interface BotClient extends Client {
     commands: Map<string, Command>;
     voiceConnection: Map<string, VoiceConnection>;
+    commandHandler: CommandHandler;
+    appDataSource: DataSource;
 }
 
 interface Command {
