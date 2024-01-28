@@ -1,4 +1,12 @@
-import { CategoryChannel, Colors, EmbedBuilder, GuildMember, PermissionsBitField, TextChannel } from "discord.js";
+import {
+    CategoryChannel,
+    Collection,
+    Colors,
+    EmbedBuilder,
+    GuildMember, Message,
+    PermissionsBitField,
+    TextChannel
+} from "discord.js";
 import { BotClient } from "../Interfaces";
 import { SupportTicket } from "../entity/SupportTicket";
 
@@ -162,7 +170,14 @@ class Administration {
                     return;
                 } ) as TextChannel;
 
-                const headerMessage = await channel.send( `<@${ guildMember.id }>` ).catch( error => {
+                const embedDescription = `Please provide the following details:\n- In-Game Name (if applicable)\n- Service you are having issues with\n- A detailed description of the issue you are having`;
+
+                const headerEmbed = new EmbedBuilder()
+                    .setColor( Colors.Yellow )
+                    .setTitle( "Support Ticket" )
+                    .setDescription( embedDescription )
+
+                const headerMessage = await channel.send( { embeds: [ headerEmbed ] } ).catch( error => {
                     reject( error );
                     return;
                 } );
@@ -242,7 +257,24 @@ class Administration {
                     return;
                 }
 
-                const members = channel.members.filter( member => !member.user.bot );
+                // get each message from the channel
+                const messages = await channel.messages.fetch().catch( error => {
+                    reject( error );
+                    return;
+                } ) as Collection<string, Message>;
+
+                if ( !messages ) {
+                    reject( "Messages not found" );
+                    return;
+                }
+
+                // for each message add the owner to an array if they are not already in it
+                const members = new Set<GuildMember>();
+                messages.forEach( message => {
+                    if ( !message.author.bot ) {
+                        members.add( message.member as GuildMember );
+                    }
+                } );
 
                 // reshape the members into an array
                 const membersArray: GuildMember[] = [];
@@ -266,7 +298,7 @@ class Administration {
                     where: {
                         id: ticketID
                     }
-                } );
+                } ) as SupportTicket;
 
                 if ( !ticket ) {
                     reject( "Ticket not found" );
@@ -305,7 +337,7 @@ class Administration {
                 const embed = new EmbedBuilder()
                     .setColor( Colors.Orange )
                     .setTitle( `Ticket #${ ticket.id } Transcript` )
-                    .setDescription( transcriptString )
+                    .setDescription( transcriptString.length > 0 ? transcriptString : "Empty Support Ticket" )
                     .setTimestamp( Date.now() )
 
                 let toSend: GuildMember[] = [];

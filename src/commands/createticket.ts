@@ -31,7 +31,7 @@ const command: Command = {
                 }
 
                 // generate a link to the channel
-                await interaction.followUp( `Created ticket id ${ response.ticketID } channel link: <#${ response.channelID }>` );
+                await interaction.followUp( `Created ticket: <#${ response.channelID }>` );
 
                 resolve();
                 return;
