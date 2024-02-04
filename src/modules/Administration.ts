@@ -118,6 +118,57 @@ class Administration {
         } );
     }
 
+    async addExtraGuildMemberToSupportTicket( executor: GuildMember, target: GuildMember, channelID: string ): Promise<void> {
+        return new Promise( async ( resolve, reject ) => {
+            try {
+                const channel = await this.client.channels.fetch( channelID );
+
+                if ( !channel ) {
+                    reject( "Channel not found" );
+                    return;
+                }
+
+                // ensure the executor either owns the ticket, or is an admin
+                const ticketID = await this.getTicketIDFromChannel( channelID ).catch( error => {
+                    reject( error );
+                    return;
+                } ) as number;
+
+                if ( !ticketID ) {
+                    reject( "Ticket not found" );
+                    return;
+                }
+
+                const ticket = await this.client.appDataSource.getRepository( SupportTicket ).findOne( {
+                    where: {
+                        id: ticketID
+                    }
+                } ) as SupportTicket;
+
+                if ( !ticket ) {
+                    reject( "Ticket not found" );
+                    return;
+                }
+
+                if ( ticket.createdBy !== executor.id && !Administration.hasAdminAccess( executor ) ) {
+                    reject( "You do not have permission to add someone to this ticket" );
+                    return;
+                }
+
+                await this.addGuildMemberToChannel( target, channelID ).catch( error => {
+                    reject( error );
+                    return;
+                } );
+
+                resolve();
+                return;
+            } catch ( error ) {
+                reject( error );
+                return;
+            }
+        } );
+    }
+
     private async getChannelTranscript( channelID: string ): Promise<transcriptItem[]> {
         return new Promise( async ( resolve, reject ) => {
             try {
