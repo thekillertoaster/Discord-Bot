@@ -3,12 +3,14 @@ import {
     Collection,
     Colors,
     EmbedBuilder,
-    GuildMember, Message,
+    GuildMember,
+    Message,
     PermissionsBitField,
     TextChannel
 } from "discord.js";
 import { BotClient } from "../Interfaces";
 import { SupportTicket } from "../entity/SupportTicket";
+import { StaffReport } from "../entity/StaffReport";
 
 export interface ticketCreateResponse {
     ticketID: number;
@@ -19,6 +21,17 @@ interface transcriptItem {
     username: string;
     message: string;
     timestamp: number;
+}
+
+interface channelToTicketResponse {
+    ticketID: number;
+    ticketType: TICKET_TYPE;
+}
+
+export enum TICKET_TYPE {
+    Support,
+    Report,
+    Appeal
 }
 
 class Administration {
@@ -129,26 +142,39 @@ class Administration {
                 }
 
                 // ensure the executor either owns the ticket, or is an admin
-                const ticketID = await this.getTicketIDFromChannel( channelID ).catch( error => {
+                const ticketDetails = await this.getTicketIDFromChannel( channelID ).catch( error => {
                     reject( error );
                     return;
-                } ) as number;
+                } ) as channelToTicketResponse;
 
-                if ( !ticketID ) {
+                if ( !ticketDetails ) {
                     reject( "Ticket not found" );
                     return;
                 }
 
-                const ticket = await this.client.appDataSource.getRepository( SupportTicket ).findOne( {
-                    where: {
-                        id: ticketID
-                    }
-                } ) as SupportTicket;
-
-                if ( !ticket ) {
-                    reject( "Ticket not found" );
-                    return;
+                let ticket: SupportTicket | StaffReport | undefined;
+                switch ( ticketDetails.ticketType ) {
+                    case TICKET_TYPE.Support:
+                        ticket = await this.client.appDataSource.getRepository( SupportTicket ).findOne( {
+                            where: {
+                                id: ticketDetails.ticketID
+                            }
+                        } ) as SupportTicket;
+                        if ( !ticket ) return reject( "Ticket not found" );
+                        break;
+                    case TICKET_TYPE.Report:
+                        ticket = await this.client.appDataSource.getRepository( StaffReport ).findOne( {
+                            where: {
+                                id: ticketDetails.ticketID
+                            }
+                        } ) as StaffReport;
+                        if ( !ticket ) return reject( "Ticket not found" );
+                        break;
+                    // case TICKET_TYPE.Appeal:
                 }
+
+                if ( !ticket ) return reject( "Ticket not found" );
+
 
                 if ( ticket.createdBy !== executor.id && !Administration.hasAdminAccess( executor ) ) {
                     reject( "You do not have permission to add someone to this ticket" );
@@ -203,10 +229,28 @@ class Administration {
         } );
     }
 
-    async createSupportTicket( guildMember: GuildMember ): Promise<ticketCreateResponse> {
+    async createSupportTicket( guildMember: GuildMember, typeOfTicket: TICKET_TYPE ): Promise<ticketCreateResponse> {
         return new Promise( async ( resolve, reject ) => {
+            let category: string | undefined;
+            switch ( typeOfTicket ) {
+                case TICKET_TYPE.Support:
+                    category = "Support";
+                    break;
+                case TICKET_TYPE.Report:
+                    category = "Staff Reports";
+                    break;
+                case TICKET_TYPE.Appeal:
+                    category = "Punishment Appeals";
+                    break;
+            }
+
+            if ( !category ) {
+                reject( "Invalid category" );
+                return;
+            }
+
             try {
-                const channelID = await this.createChannelInCategory( "Tickets", "awaiting-rename" ).catch( error => {
+                const channelID = await this.createChannelInCategory( category, "awaiting-rename" ).catch( error => {
                     reject( error );
                     return;
                 } ) as string;
@@ -221,11 +265,33 @@ class Administration {
                     return;
                 } ) as TextChannel;
 
-                const embedDescription = `Please provide the following details:\n- In-Game Name (if applicable)\n- Service you are having issues with\n- A detailed description of the issue you are having`;
+                const embedDescription = ((): string => {
+                    switch ( typeOfTicket ) {
+                        case TICKET_TYPE.Support:
+                            return `Please provide the following details:\n- In-Game Name (if applicable)\n- Service you are having issues with\n- A detailed description of the issue you are having`;
+                        case TICKET_TYPE.Report:
+                            return `Please provide the following details:\n- In-Game Name (if applicable)\n- Staff member you are having issues with\n- A detailed description of the issue you are having\n- Any evidence you have to support your claim (screenshots, videos, etc)`;
+                        case TICKET_TYPE.Appeal:
+                            return `Please provide the following details:\n- In-Game Name (if applicable)\n- Reason for your ban\n- Why you believe you should be unbanned\n- Any evidence you have to support your appeal (screenshots, videos, etc)`;
+                        default:
+                            return "this should never happen";
+                    }
+                })();
 
                 const headerEmbed = new EmbedBuilder()
                     .setColor( Colors.Yellow )
-                    .setTitle( "Support Ticket" )
+                    .setTitle( ((): string => {
+                        switch ( typeOfTicket ) {
+                            case TICKET_TYPE.Support:
+                                return "Support Ticket";
+                            case TICKET_TYPE.Report:
+                                return "Staff Report";
+                            case TICKET_TYPE.Appeal:
+                                return "Punishment Appeal";
+                            default:
+                                return "this should never happen";
+                        }
+                    })() )
                     .setDescription( embedDescription )
 
                 const headerMessage = await channel.send( { embeds: [ headerEmbed ] } ).catch( error => {
@@ -238,7 +304,20 @@ class Administration {
                     return;
                 }
 
-                const supportTicket = new SupportTicket();
+                const supportTicket = ((): SupportTicket | StaffReport => {
+                    switch ( typeOfTicket ) {
+                        case TICKET_TYPE.Support:
+                            return new SupportTicket();
+                        case TICKET_TYPE.Report:
+                            return new StaffReport();
+                        case TICKET_TYPE.Appeal:
+                            return new StaffReport();
+                        default:
+                            return new SupportTicket();
+                    }
+                })();
+
+                // const supportTicket = new SupportTicket();
                 supportTicket.createdChannelID = channelID;
                 supportTicket.headerMessageID = headerMessage.id;
                 supportTicket.createdTimestamp = Date.now();
@@ -254,8 +333,20 @@ class Administration {
                     return;
                 }
 
-                // rename the channel to the ticket id
-                await channel.setName( `ticket-${ addedTicket.id }` ).catch( error => {
+                const prefix = ((): string => {
+                    switch ( typeOfTicket ) {
+                        case TICKET_TYPE.Support:
+                            return "support";
+                        case TICKET_TYPE.Report:
+                            return "report";
+                        case TICKET_TYPE.Appeal:
+                            return "appeal";
+                        default:
+                            return "this should never happen";
+                    }
+                })();
+
+                await channel.setName( `${ prefix }-${ addedTicket.id }` ).catch( error => {
                     reject( error );
                     return;
                 } );
@@ -272,21 +363,27 @@ class Administration {
         } );
     }
 
-    async getTicketIDFromChannel( channelID: string ): Promise<number> {
+    async getTicketIDFromChannel( channelID: string ): Promise<channelToTicketResponse> {
         return new Promise( async ( resolve, reject ) => {
             try {
-                const ticket = await this.client.appDataSource.getRepository( SupportTicket ).findOne( {
-                    where: {
-                        createdChannelID: channelID
-                    }
+                let ticket = await this.client.appDataSource.getRepository( SupportTicket ).findOne( {
+                    where: { createdChannelID: channelID }
                 } );
+                if ( ticket ) {
+                    return resolve( { ticketID: ticket.id, ticketType: TICKET_TYPE.Support } );
+                }
+
+                ticket = await this.client.appDataSource.getRepository( StaffReport ).findOne( {
+                    where: { createdChannelID: channelID }
+                } );
+                if ( ticket ) {
+                    return resolve( { ticketID: ticket.id, ticketType: TICKET_TYPE.Report } );
+                }
 
                 if ( !ticket ) {
                     reject( "Ticket not found" );
                     return;
                 }
-
-                resolve( ticket.id )
                 return;
             } catch ( error ) {
                 reject( error );
@@ -342,14 +439,29 @@ class Administration {
         } );
     }
 
-    async closeSupportTicket( guildMember: GuildMember, ticketID: number ): Promise<void> {
+    async closeSupportTicket( guildMember: GuildMember, ticketDetails: channelToTicketResponse ): Promise<void> {
         return new Promise( async ( resolve, reject ) => {
             try {
-                const ticket = await this.client.appDataSource.getRepository( SupportTicket ).findOne( {
-                    where: {
-                        id: ticketID
-                    }
-                } ) as SupportTicket;
+                let ticket: SupportTicket | StaffReport | undefined;
+                switch ( ticketDetails.ticketType ) {
+                    case TICKET_TYPE.Support:
+                        ticket = await this.client.appDataSource.getRepository( SupportTicket ).findOne( {
+                            where: {
+                                id: ticketDetails.ticketID
+                            }
+                        } ) as SupportTicket;
+                        if ( !ticket ) return reject( "Ticket not found" );
+                        break;
+                    case TICKET_TYPE.Report:
+                        ticket = await this.client.appDataSource.getRepository( StaffReport ).findOne( {
+                            where: {
+                                id: ticketDetails.ticketID
+                            }
+                        } ) as StaffReport;
+                        if ( !ticket ) return reject( "Ticket not found" );
+                        break;
+                    // case TICKET_TYPE.Appeal:
+                }
 
                 if ( !ticket ) {
                     reject( "Ticket not found" );
@@ -432,10 +544,21 @@ class Administration {
                 } );
 
                 // delete the ticket from the database
-                await this.client.appDataSource.getRepository( SupportTicket ).delete( ticket ).catch( error => {
-                    reject( error );
-                    return;
-                } );
+                switch ( ticketDetails.ticketType ) {
+                    case TICKET_TYPE.Support:
+                        await this.client.appDataSource.getRepository( SupportTicket ).delete( ticket.id ).catch( error => {
+                            reject( error );
+                            return;
+                        } );
+                        break;
+                    case TICKET_TYPE.Report:
+                        await this.client.appDataSource.getRepository( StaffReport ).delete( ticket.id ).catch( error => {
+                            reject( error );
+                            return;
+                        } );
+                        break;
+                    // case TICKET_TYPE.Appeal:
+                }
 
                 resolve();
                 return;

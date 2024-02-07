@@ -1,5 +1,5 @@
 import Command, { BotClient } from '../Interfaces';
-import Administration, { ticketCreateResponse } from "../modules/Administration";
+import Administration, { TICKET_TYPE, ticketCreateResponse } from "../modules/Administration";
 import { GuildMember, User } from "discord.js";
 import administration from "../modules/Administration";
 
@@ -7,6 +7,13 @@ const command: Command = {
     data: {
         name: 'createticket',
         description: 'creates a ticket',
+        options: [
+            {
+                name: 'type',
+                description: 'The type of ticket (1 = support, 2 = report, 3 = appeal)',
+                type: 4,
+                required: false,
+            } ]
     },
 
     async execute( interaction, client: BotClient ) {
@@ -20,7 +27,21 @@ const command: Command = {
                     return;
                 }
 
-                const response = await AdministrationInstance.createSupportTicket( interaction.member as GuildMember ).catch( ( err ) => {
+                // @ts-ignore
+                let numType: number = interaction.options.getInteger( 'type' );
+
+                if ( !numType ) {
+                    numType = 1; // default to support
+                }
+
+                if ( numType < 1 || numType > 3 ) {
+                    reject( "Invalid type" );
+                    return;
+                }
+
+                const type = numType - 1 as TICKET_TYPE; // 0 = support, 1 = report, 2 = appeal
+
+                const response = await AdministrationInstance.createSupportTicket( interaction.member as GuildMember, type ).catch( ( err ) => {
                     reject( err );
                     return;
                 } ) as ticketCreateResponse;

@@ -20,6 +20,7 @@ const appDBName = process.env.DB_NAME!;
 
 // Entities
 import { SupportTicket } from "./entity/SupportTicket";
+import { StaffReport } from "./entity/StaffReport";
 
 async function configureDB(): Promise<DataSource> {
     return new Promise( async ( resolve, reject ) => {
@@ -30,7 +31,8 @@ async function configureDB(): Promise<DataSource> {
             password: appDBPassword,
             database: appDBName,
             entities: [
-                SupportTicket
+                SupportTicket,
+                StaffReport,
             ],
             synchronize: true,
             logging: true,
