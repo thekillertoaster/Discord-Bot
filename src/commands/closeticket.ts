@@ -1,12 +1,11 @@
 import Command, { BotClient } from '../Interfaces';
-import Administration, { ticketCreateResponse } from "../modules/Administration";
+import Administration from "../modules/Administration";
 import { GuildMember, User } from "discord.js";
-import administration from "../modules/Administration";
 
 const command: Command = {
     data: {
         name: 'closeticket',
-        description: 'closes the current ticket',
+        description: 'closes the current ticket (run in a ticket channel)',
     },
 
     async execute( interaction, client: BotClient ) {

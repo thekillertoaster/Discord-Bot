@@ -11,6 +11,7 @@ import {
 import { BotClient } from "../Interfaces";
 import { SupportTicket } from "../entity/SupportTicket";
 import { StaffReport } from "../entity/StaffReport";
+import { Appeal } from "../entity/Appeal";
 
 export interface ticketCreateResponse {
     ticketID: number;
@@ -83,7 +84,6 @@ class Administration {
                     return;
                 }
 
-                // @ts-ignore
                 const categoryChannel = category as CategoryChannel;
 
                 const channel = await guild.channels.create( {
@@ -152,26 +152,11 @@ class Administration {
                     return;
                 }
 
-                let ticket: SupportTicket | StaffReport | undefined;
-                switch ( ticketDetails.ticketType ) {
-                    case TICKET_TYPE.Support:
-                        ticket = await this.client.appDataSource.getRepository( SupportTicket ).findOne( {
-                            where: {
-                                id: ticketDetails.ticketID
-                            }
-                        } ) as SupportTicket;
-                        if ( !ticket ) return reject( "Ticket not found" );
-                        break;
-                    case TICKET_TYPE.Report:
-                        ticket = await this.client.appDataSource.getRepository( StaffReport ).findOne( {
-                            where: {
-                                id: ticketDetails.ticketID
-                            }
-                        } ) as StaffReport;
-                        if ( !ticket ) return reject( "Ticket not found" );
-                        break;
-                    // case TICKET_TYPE.Appeal:
-                }
+                const ticket = await this.findTicketFromDetails( ticketDetails ).catch( error => {
+                    reject( error );
+                    return;
+                } );
+
 
                 if ( !ticket ) return reject( "Ticket not found" );
 
@@ -304,26 +289,25 @@ class Administration {
                     return;
                 }
 
-                const supportTicket = ((): SupportTicket | StaffReport => {
+                const ticket = ((): SupportTicket | StaffReport | Appeal => {
                     switch ( typeOfTicket ) {
                         case TICKET_TYPE.Support:
                             return new SupportTicket();
                         case TICKET_TYPE.Report:
                             return new StaffReport();
                         case TICKET_TYPE.Appeal:
-                            return new StaffReport();
+                            return new Appeal();
                         default:
                             return new SupportTicket();
                     }
                 })();
 
-                // const supportTicket = new SupportTicket();
-                supportTicket.createdChannelID = channelID;
-                supportTicket.headerMessageID = headerMessage.id;
-                supportTicket.createdTimestamp = Date.now();
-                supportTicket.createdBy = guildMember.id;
+                ticket.createdChannelID = channelID;
+                ticket.headerMessageID = headerMessage.id;
+                ticket.createdTimestamp = Date.now();
+                ticket.createdBy = guildMember.id;
 
-                const addedTicket = await this.client.appDataSource.manager.save( supportTicket ).catch( error => {
+                const addedTicket = await this.client.appDataSource.manager.save( ticket ).catch( error => {
                     reject( error );
                     return;
                 } );
@@ -342,7 +326,7 @@ class Administration {
                         case TICKET_TYPE.Appeal:
                             return "appeal";
                         default:
-                            return "this should never happen";
+                            return "this-should-never-happen";
                     }
                 })();
 
@@ -380,10 +364,14 @@ class Administration {
                     return resolve( { ticketID: ticket.id, ticketType: TICKET_TYPE.Report } );
                 }
 
-                if ( !ticket ) {
-                    reject( "Ticket not found" );
-                    return;
+                ticket = await this.client.appDataSource.getRepository( Appeal ).findOne( {
+                    where: { createdChannelID: channelID }
+                } );
+                if ( ticket ) {
+                    return resolve( { ticketID: ticket.id, ticketType: TICKET_TYPE.Appeal } );
                 }
+
+                if ( !ticket ) return reject( "Ticket not found" );
                 return;
             } catch ( error ) {
                 reject( error );
@@ -397,7 +385,7 @@ class Administration {
             try {
                 const channel = await this.client.channels.fetch( channelID ).catch( error => {
                     reject( error );
-                    return;
+                    return null;
                 } ) as TextChannel;
 
                 if ( !channel ) {
@@ -405,10 +393,10 @@ class Administration {
                     return;
                 }
 
-                // get each message from the channel
-                const messages = await channel.messages.fetch().catch( error => {
+                // Attempt to fetch more messages, adjust according to your needs
+                const messages = await channel.messages.fetch( { limit: 100 } ).catch( error => {
                     reject( error );
-                    return;
+                    return null;
                 } ) as Collection<string, Message>;
 
                 if ( !messages ) {
@@ -416,33 +404,31 @@ class Administration {
                     return;
                 }
 
-                // for each message add the owner to an array if they are not already in it
                 const members = new Set<GuildMember>();
                 messages.forEach( message => {
-                    if ( !message.author.bot ) {
-                        members.add( message.member as GuildMember );
+                    if ( !message.author.bot && message.member ) { // Check if member is not null
+                        members.add( message.member );
                     }
                 } );
 
-                // reshape the members into an array
                 const membersArray: GuildMember[] = [];
                 members.forEach( member => {
-                    membersArray.push( member );
+                    if ( member ) { // Extra precaution
+                        membersArray.push( member );
+                    }
                 } );
 
-                resolve( membersArray );
-                return;
+                return resolve( membersArray );
             } catch ( error ) {
-                reject( error );
-                return;
+                return reject( error );
             }
         } );
     }
 
-    async closeSupportTicket( guildMember: GuildMember, ticketDetails: channelToTicketResponse ): Promise<void> {
+    private async findTicketFromDetails( ticketDetails: channelToTicketResponse ): Promise<SupportTicket | StaffReport | Appeal | undefined> {
         return new Promise( async ( resolve, reject ) => {
             try {
-                let ticket: SupportTicket | StaffReport | undefined;
+                let ticket: SupportTicket | StaffReport | Appeal | undefined;
                 switch ( ticketDetails.ticketType ) {
                     case TICKET_TYPE.Support:
                         ticket = await this.client.appDataSource.getRepository( SupportTicket ).findOne( {
@@ -460,15 +446,38 @@ class Administration {
                         } ) as StaffReport;
                         if ( !ticket ) return reject( "Ticket not found" );
                         break;
-                    // case TICKET_TYPE.Appeal:
+                    case TICKET_TYPE.Appeal:
+                        ticket = await this.client.appDataSource.getRepository( Appeal ).findOne( {
+                            where: {
+                                id: ticketDetails.ticketID
+                            }
+                        } ) as Appeal;
+                        if ( !ticket ) return reject( "Ticket not found" );
+                        break;
                 }
 
-                if ( !ticket ) {
-                    reject( "Ticket not found" );
+                if ( !ticket ) return reject( "Ticket not found" );
+
+                resolve( ticket );
+                return;
+            } catch ( error ) {
+                reject( error );
+                return;
+            }
+        } );
+    }
+
+    async closeSupportTicket( executor: GuildMember, ticketDetails: channelToTicketResponse ): Promise<void> {
+        return new Promise( async ( resolve, reject ) => {
+            try {
+                const ticket = await this.findTicketFromDetails( ticketDetails ).catch( error => {
+                    reject( error );
                     return;
-                }
+                } );
 
-                if ( ticket.createdBy !== guildMember.id && !Administration.hasAdminAccess( guildMember ) ) {
+                if ( !ticket ) return reject( "Ticket not found" );
+
+                if ( ticket.createdBy !== executor.id && !Administration.hasAdminAccess( executor ) ) {
                     reject( "You are not the creator of this ticket" );
                     return;
                 }
@@ -503,28 +512,32 @@ class Administration {
                     .setDescription( transcriptString.length > 0 ? transcriptString : "Empty Support Ticket" )
                     .setTimestamp( Date.now() )
 
-                let toSend: GuildMember[] = [];
+                let toSend: GuildMember[];
                 toSend = await this.getActiveChatParticipants( ticket.createdChannelID ).catch( error => {
                     reject( error );
                     return;
                 } ) as GuildMember[];
 
                 // if the owner of the ticket is not in the toSend list, add them
-                const ownerMember = await guildMember.guild.members.fetch( ticket.createdBy ).catch( error => {
+                const ownerMember = await executor.guild.members.fetch( ticket.createdBy ).catch( error => {
                     reject( error );
                     return;
                 } ) as GuildMember;
 
-                if ( !toSend.some( member => member.id === ownerMember.id ) ) {  // if the owner of the ticket is not in the toSend list, add them
+                if ( toSend.length === 0 ) {
                     toSend.push( ownerMember );
                 }
 
-                if ( !toSend.some( member => member.id === guildMember.id ) ) {  // if the closer of the ticket is not in the toSend list, add them
-                    toSend.push( guildMember );
+                // if the owner of the ticket is not in the toSend list, add them
+                if ( !toSend.some( toSendMember => toSendMember.id === ownerMember.id ) ) {
+                    toSend.push( ownerMember );
+                }
+
+                if ( !toSend.some( toSendMember => toSendMember.id === executor.id ) ) {  // if the closer of the ticket is not in the toSend list, add them
+                    toSend.push( executor );
                 }
 
                 for ( let i = 0; i < toSend.length; i++ ) {
-                    console.log( toSend[i].user.username );
                     await toSend[i].send( {
                         embeds: [ embed ]
                     } ).catch( error => {
@@ -557,7 +570,12 @@ class Administration {
                             return;
                         } );
                         break;
-                    // case TICKET_TYPE.Appeal:
+                    case TICKET_TYPE.Appeal:
+                        await this.client.appDataSource.getRepository( Appeal ).delete( ticket.id ).catch( error => {
+                            reject( error );
+                            return;
+                        } );
+                        break;
                 }
 
                 resolve();
