@@ -740,6 +740,65 @@ class Administration {
             }
         } );
     }
+
+    async addRolePermission( roleID: string, permission: string | number ): Promise<boolean> {
+        return new Promise( async ( resolve, reject ) => {
+            try {
+                let commandPermission;
+                if ( typeof permission === "string" ) {
+                    commandPermission = await this.client.appDataSource.getRepository( CommandPermission ).findOne( {
+                        where: { permissionString: permission }
+                    } );
+                } else if ( typeof permission === "number" ) {
+                    commandPermission = await this.client.appDataSource.getRepository( CommandPermission ).findOne( {
+                        where: { id: permission }
+                    } );
+                } else {
+                    reject( "Invalid permission type" );
+                    return;
+                }
+
+                if ( !commandPermission ) {
+                    reject( "Permission not found" );
+                    return;
+                }
+
+                // check if the role already has the permission
+                const rolePermissions = await this.getRolePermissions( roleID ).catch( error => {
+                    reject( error );
+                    return;
+                } ) as number[];
+
+                if ( rolePermissions ) {
+                    if ( rolePermissions.includes( commandPermission.id ) ) {  // if the role already has the permission
+                        resolve( false );  // return false to indicate that the role already has the permission
+                        return;
+                    }
+                }
+
+                // create a new role permission
+                const rolePermission = new RolePermission();
+                rolePermission.roleID = roleID;
+                rolePermission.permission = commandPermission.id;
+
+                const addedRolePermission = await this.client.appDataSource.manager.save( rolePermission ).catch( error => {
+                    reject( error );
+                    return;
+                } );
+
+                if ( !addedRolePermission ) {
+                    reject( "Failed to add role permission to database" );
+                    return;
+                }
+
+                resolve( true );
+                return;
+            } catch ( error ) {
+                reject( error );
+                return;
+            }
+        } );
+    }
 }
 
 export default Administration;

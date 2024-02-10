@@ -1,7 +1,8 @@
-import Command, { BotClient } from '../Interfaces';
-import Administration, { TICKET_TYPE, ticketCreateResponse } from "../modules/Administration";
+import Command, { BotClient } from '../../Interfaces';
+import Administration, { TICKET_TYPE, ticketCreateResponse } from "../../modules/Administration";
 import { GuildMember, User } from "discord.js";
-import administration from "../modules/Administration";
+import administration from "../../modules/Administration";
+import { CommandPermission } from "../../entity/CommandPermission";
 
 const command: Command = {
     data: {
@@ -21,6 +22,13 @@ const command: Command = {
             try {
                 await interaction.deferReply()
                 const AdministrationInstance = new Administration( client );
+
+                const commandPermission = await AdministrationInstance.registerNewCommandPermission( "ticket.create" ) as CommandPermission;
+                const hasPermission = await AdministrationInstance.userHasPermission( interaction.member as GuildMember, commandPermission.id );
+                if ( !hasPermission ) {
+                    reject( "You do not have permission to use this command" );
+                    return;
+                }
 
                 if ( !interaction.member ) {
                     reject( "Member not found" );

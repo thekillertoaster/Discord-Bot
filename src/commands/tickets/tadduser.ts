@@ -1,7 +1,7 @@
-import Command, { BotClient } from '../Interfaces';
-import Administration, { ticketCreateResponse } from "../modules/Administration";
+import Command, { BotClient } from '../../Interfaces';
+import Administration, { ticketCreateResponse } from "../../modules/Administration";
 import { GuildMember, TextBasedChannel, TextChannel, User } from "discord.js";
-import administration from "../modules/Administration";
+import administration from "../../modules/Administration";
 
 const command: Command = {
     data: {

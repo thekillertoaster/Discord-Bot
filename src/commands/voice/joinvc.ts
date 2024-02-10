@@ -1,8 +1,10 @@
 // import command interface
-import Command from '../Interfaces';
+import Command from '../../Interfaces';
 import { joinVoiceChannel, VoiceConnection } from '@discordjs/voice';
 import { GuildMember, VoiceBasedChannel } from "discord.js";
-import { BotClient } from "../Interfaces";
+import { BotClient } from "../../Interfaces";
+import Administration from "../../modules/Administration";
+import { CommandPermission } from "../../entity/CommandPermission";
 
 const command: Command = {
     data: {
@@ -12,6 +14,15 @@ const command: Command = {
 
     async execute( interaction, client: BotClient ) {
         if ( !(!(interaction.member instanceof GuildMember) || interaction.member?.partial) ) {
+            const Administrator = new Administration( client );
+            const commandPermission = await Administrator.registerNewCommandPermission( "vc.join" ) as CommandPermission;
+            const hasPermission = await Administrator.userHasPermission( interaction.member as GuildMember, commandPermission.id );
+            if ( !hasPermission ) {
+                await interaction.reply( "You do not have permission to use this command" );
+                return;
+            }
+
+
             const channel: VoiceBasedChannel | null = interaction.member?.voice.channel;
             if ( channel ) {
                 const connection: VoiceConnection = joinVoiceChannel( {

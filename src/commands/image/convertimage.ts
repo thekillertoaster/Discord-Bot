@@ -1,6 +1,9 @@
-import Command from '../Interfaces';
-import ImageMagick from '../modules/ImageMagick';
+import Command, { BotClient } from '../../Interfaces';
+import ImageMagick from '../../modules/ImageMagick';
 import fs from "fs";
+import Administration from "../../modules/Administration";
+import { CommandPermission } from "../../entity/CommandPermission";
+import { GuildMember } from "discord.js";
 
 const command: Command = {
     data: {
@@ -22,10 +25,19 @@ const command: Command = {
         ],
     },
 
-    async execute( interaction ): Promise<void> {
+    async execute( interaction, client: BotClient ): Promise<void> {
         return new Promise( async ( resolve, reject ) => {
             try {
-                await interaction.deferReply( { ephemeral: false })
+                const Administrator = new Administration( client );
+                const commandPermission = await Administrator.registerNewCommandPermission( "image.convert" ) as CommandPermission;
+                const hasPermission = await Administrator.userHasPermission( interaction.member as GuildMember, commandPermission.id );
+                if ( !hasPermission ) {
+                    reject( "You do not have permission to use this command" );
+                    return;
+                }
+
+
+                await interaction.deferReply( { ephemeral: false } )
                 const imageMagick = new ImageMagick();
 
                 // @ts-ignore
@@ -37,11 +49,11 @@ const command: Command = {
                 const convertedImagePath = await imageMagick.convert( image.url, type );
 
                 if ( !convertedImagePath ) {
-                    reject("error");
+                    reject( "error" );
                     return;
                 }
 
-                console.log("attempting to reply")
+                console.log( "attempting to reply" )
 
                 // generate a new discord reply with the converted image
                 try {
