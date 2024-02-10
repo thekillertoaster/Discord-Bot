@@ -12,6 +12,8 @@ import { BotClient } from "../Interfaces";
 import { SupportTicket } from "../entity/SupportTicket";
 import { StaffReport } from "../entity/StaffReport";
 import { Appeal } from "../entity/Appeal";
+import { CommandPermission } from "../entity/CommandPermission";
+import { RolePermission } from "../entity/RolePermission";
 
 export interface ticketCreateResponse {
     ticketID: number;
@@ -123,6 +125,158 @@ class Administration {
                 } );
 
                 resolve();
+                return;
+            } catch ( error ) {
+                reject( error );
+                return;
+            }
+        } );
+    }
+
+    async registerNewCommandPermission( permissionString: string ): Promise<CommandPermission> {
+        return new Promise( async ( resolve, reject ) => {
+            try {
+                // check if the permission already exists
+                const existingPermission = await this.client.appDataSource.getRepository( CommandPermission ).findOne( {
+                    where: { permissionString: permissionString }
+                } ) as CommandPermission;
+
+                if ( existingPermission ) {
+                    resolve( existingPermission );
+                    return;
+                }
+
+                const commandPermission = new CommandPermission();
+                commandPermission.permissionString = permissionString;
+
+                const addedPermission = await this.client.appDataSource.manager.save( commandPermission ).catch( error => {
+                    reject( error );
+                    return;
+                } );
+
+                if ( !addedPermission ) {
+                    reject( "Failed to add permission to database" );
+                    return;
+                }
+
+                resolve( addedPermission );
+                return;
+            } catch ( error ) {
+                reject( error );
+                return;
+            }
+        } );
+    }
+
+    async getRolePermissions( roleID: string ): Promise<number[]> {
+        return new Promise( async ( resolve, reject ) => {
+            try {
+                const rolePermissions = await this.client.appDataSource.getRepository( RolePermission ).find( {
+                    where: { roleID: roleID }
+                } ) as RolePermission[];
+
+                if ( !rolePermissions ) {
+                    reject( "Role not found" );
+                    return;
+                }
+
+                // for each role permission, get the permission id and add it to the array if it's not already there
+                const permissions: number[] = [];
+                for ( let i = 0; i < rolePermissions.length; i++ ) {
+                    if ( !permissions.includes( rolePermissions[i].permission ) ) {
+                        permissions.push( rolePermissions[i].permission );
+                    }
+                }
+
+                resolve( permissions );
+                return;
+            } catch ( error ) {
+                reject( error );
+                return;
+            }
+        } );
+    }
+
+    async roleHasPermission( roleID: string, permission: string | number ): Promise<boolean> {
+        return new Promise( async ( resolve, reject ) => {
+            try {
+                const rolePermissions = await this.getRolePermissions( roleID ).catch( error => {
+                    reject( error );
+                    return;
+                } );
+
+                if ( !rolePermissions ) {
+                    reject( "Role not found" );
+                    return;
+                }
+
+                let commandPermission;
+                if ( typeof permission === "string" ) {
+                    commandPermission = await this.client.appDataSource.getRepository( CommandPermission ).findOne( {
+                        where: { permissionString: permission }
+                    } );
+                } else if ( typeof permission === "number" ) {
+                    commandPermission = await this.client.appDataSource.getRepository( CommandPermission ).findOne( {
+                        where: { id: permission }
+                    } );
+                } else {
+                    reject( "Invalid permission type" );
+                    return;
+                }
+
+                if ( !commandPermission ) {
+                    reject( "Permission not found" );
+                    return;
+                }
+
+                resolve( rolePermissions.includes( commandPermission.id ) );
+                return;
+            } catch ( error ) {
+                reject( error );
+                return;
+            }
+        } );
+    }
+
+    async getRoles( guildMember: GuildMember ): Promise<string[]> {
+        return new Promise( async ( resolve, reject ) => {
+            try {
+                const roles = guildMember.roles.cache.map( role => role.id );
+                resolve( roles );
+                return;
+            } catch ( error ) {
+                reject( error );
+                return;
+            }
+        } );
+    }
+
+    async userHasPermission( guildMember: GuildMember, permission: string | number ): Promise<boolean> {
+        return new Promise( async ( resolve, reject ) => {
+            try {
+                const roles = await this.getRoles( guildMember ).catch( error => {
+                    reject( error );
+                    return;
+                } );
+
+                if ( !roles ) {
+                    reject( "Roles not found" );
+                    return;
+                }
+
+                for ( let i = 0; i < roles.length; i++ ) {
+                    const hasPermission = await this.roleHasPermission( roles[i], permission ).catch( error => {
+                        reject( error );
+                        return;
+                    } );
+
+                    if ( hasPermission ) {
+                        resolve( true );
+                        return;
+                    }
+                }
+
+                resolve( false );
                 return;
             } catch ( error ) {
                 reject( error );

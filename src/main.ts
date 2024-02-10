@@ -22,6 +22,8 @@ const appDBName = process.env.DB_NAME!;
 import { SupportTicket } from "./entity/SupportTicket";
 import { StaffReport } from "./entity/StaffReport";
 import { Appeal } from "./entity/Appeal";
+import { RolePermission } from "./entity/RolePermission";
+import { CommandPermission } from "./entity/CommandPermission";
 
 async function configureDB(): Promise<DataSource> {
     return new Promise( async ( resolve, reject ) => {
@@ -35,6 +37,8 @@ async function configureDB(): Promise<DataSource> {
                 SupportTicket,
                 StaffReport,
                 Appeal,
+                RolePermission,
+                CommandPermission,
             ],
             synchronize: true,
             logging: true,
