@@ -4,6 +4,7 @@ import { addSpeechEvent } from "discord-speech-recognition";
 import BotClient from "./modules/BotClient";
 import "reflect-metadata";
 import { DataSource } from "typeorm";
+import SteamAPI from "steamapi";
 
 config();
 
@@ -17,6 +18,8 @@ const appDBHost = process.env.DB_HOST!;
 const appDBUser = process.env.DB_USER!;
 const appDBPassword = process.env.DB_PASSWORD!;
 const appDBName = process.env.DB_NAME!;
+
+const steamAPIKey = process.env.STEAM_API_KEY!;
 
 // Entities
 import { SupportTicket } from "./entity/SupportTicket";
@@ -59,7 +62,9 @@ async function main() {
         process.exit( 1 );
     } );
 
-    const client = new BotClient( AppDataSource );
+    const steam = new SteamAPI( steamAPIKey );
+
+    const client = new BotClient( AppDataSource, steam );
     addSpeechEvent( client );
 
     await client.start( token, clientId, guildId )

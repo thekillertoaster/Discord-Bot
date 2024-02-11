@@ -2,14 +2,16 @@ import { Client, GatewayIntentBits } from "discord.js";
 import { VoiceConnection } from "@discordjs/voice";
 import CommandHandler from "./CommandHandler";
 import { DataSource } from "typeorm";
+import SteamAPI from "steamapi";
 
 class BotClient extends Client {
     commands = new Map<string, any>();
     voiceConnection = new Map<string, VoiceConnection>();
     commandHandler: CommandHandler;
     appDataSource: DataSource;  // TypeORM DataSource
+    steamAPI: SteamAPI;  // SteamAPI
 
-    constructor( dataSource: DataSource ) {
+    constructor( dataSource: DataSource, steamAPI: SteamAPI ) {
         super( {
             intents: [
                 GatewayIntentBits.Guilds,
@@ -21,6 +23,7 @@ class BotClient extends Client {
         } );
         this.commandHandler = new CommandHandler( this ); // Initialize CommandHandler
         this.appDataSource = dataSource;
+        this.steamAPI = steamAPI;
     }
 
     async start( token: string, clientId: string, guildId: string ): Promise<void> {
