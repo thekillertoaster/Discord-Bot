@@ -36,7 +36,10 @@ const command: Command = {
                 await interaction.deferReply();
                 const SLI = new SteamLinks( client );
 
-                const result = await SLI.createLinkRequest( interaction.member as GuildMember, steamID );
+                const result = await SLI.createLinkRequest( interaction.member as GuildMember, steamID ).catch( ( error ) => {
+                    reject( error );
+                    return;
+                });
 
                 if ( result ) {
                     if ( result.existing ) {

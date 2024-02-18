@@ -69,7 +69,7 @@ class CommandHandler {
             await command.execute( interaction, this.client );
         } catch ( error ) {
             console.error( `Error executing command ${ interaction.commandName }:`, error );
-            const content = `Error: ${ error instanceof Error ? error.message : "Unknown error" }`;
+            const content = `Error: ${ error }`;
 
             if ( !interaction.replied && !interaction.deferred ) {
                 await interaction.reply( {

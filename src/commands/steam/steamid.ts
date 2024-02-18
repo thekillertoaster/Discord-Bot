@@ -23,7 +23,10 @@ const command: Command = {
 
                 // @ts-ignore
                 const steamid = interaction.options.getString( "steamid" );
-                const result = await SLI.getSteamID64( steamid );
+                const result = await SLI.getSteamID64( steamid ).catch( ( error ) => {
+                    reject( error );
+                    return;
+                });
 
                 await interaction.followUp( `SteamID64: ${ result }` );
 

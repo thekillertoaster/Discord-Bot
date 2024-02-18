@@ -81,17 +81,28 @@ class SteamLinks {
     public async createLinkRequest( member: GuildMember, steamID: string ): Promise<createLinkRequestResponse> {
         return new Promise( async ( resolve, reject ) => {
             try {
+                const existingLink = await this.client.appDataSource.manager.findOne( Links, {
+                    where: {
+                        userID: member.id
+                    }
+                } ) as Links;
+
+                if ( existingLink ) {
+                    reject( "user already has a link" );
+                    return;
+                }
+
                 // check if the user already has a link request
-                const existingLink = await this.client.appDataSource.manager.findOne( AwaitingLink, {
+                const existingLinkReq = await this.client.appDataSource.manager.findOne( AwaitingLink, {
                     where: {
                         userID: member.id
                     }
                 } ) as AwaitingLink;
 
-                if ( existingLink ) {
+                if ( existingLinkReq ) {
                     resolve( {
-                        linkID: existingLink.id,
-                        linkCode: existingLink.linkCode,
+                        linkID: existingLinkReq.id,
+                        linkCode: existingLinkReq.linkCode,
                         existing: true
                     } );
                     return;

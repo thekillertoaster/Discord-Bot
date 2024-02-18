@@ -14,7 +14,11 @@ const command: Command = {
                 try {
                     await interaction.deferReply();
                     const SLI = new SteamLinks( client );
-                    const result = await SLI.createLink( interaction.member as GuildMember );
+                    const result = await SLI.createLink( interaction.member as GuildMember ).catch( ( error ) => {
+                        reject( error );
+                        return;
+                    } );
+
                     if ( result ) {
                         await interaction.followUp( `Your steam account has been linked` );
                         resolve();
