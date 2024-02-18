@@ -27,6 +27,8 @@ import { StaffReport } from "./entity/StaffReport";
 import { Appeal } from "./entity/Appeal";
 import { RolePermission } from "./entity/RolePermission";
 import { CommandPermission } from "./entity/CommandPermission";
+import { AwaitingLink } from "./entity/steam/AwaitingLink";
+import { Links } from "./entity/steam/Links";
 
 async function configureDB(): Promise<DataSource> {
     return new Promise( async ( resolve, reject ) => {
@@ -42,6 +44,8 @@ async function configureDB(): Promise<DataSource> {
                 Appeal,
                 RolePermission,
                 CommandPermission,
+                AwaitingLink,
+                Links
             ],
             synchronize: true,
             logging: true,
