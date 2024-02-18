@@ -11,3 +11,5 @@ export class RolePermission {
     @Column()
     permission!: number
 }
+
+export default RolePermission;

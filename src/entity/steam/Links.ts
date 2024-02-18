@@ -11,3 +11,5 @@ export class Links {
     @Column()
     steamID!: string
 }
+
+export default Links;

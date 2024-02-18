@@ -1,10 +1,16 @@
+// Third-party module imports
 import { config } from 'dotenv';
-import VoiceToResponse from "./modules/VoiceToResponse";
 import { addSpeechEvent } from "discord-speech-recognition";
-import BotClient from "./modules/BotClient";
-import "reflect-metadata";
 import { DataSource } from "typeorm";
 import SteamAPI from "steamapi";
+
+// Polyfills and global modifications
+import "reflect-metadata"; // This modifies global scope, keep it separate for clarity
+
+// Local module imports
+import BotClient from "./modules/BotClient";
+import EntityHandler from "./modules/EntityHandler";
+import VoiceToResponse from "./modules/VoiceToResponse";
 
 config();
 
@@ -21,32 +27,18 @@ const appDBName = process.env.DB_NAME!;
 
 const steamAPIKey = process.env.STEAM_API_KEY!;
 
-// Entities
-import { SupportTicket } from "./entity/SupportTicket";
-import { StaffReport } from "./entity/StaffReport";
-import { Appeal } from "./entity/Appeal";
-import { RolePermission } from "./entity/RolePermission";
-import { CommandPermission } from "./entity/CommandPermission";
-import { AwaitingLink } from "./entity/steam/AwaitingLink";
-import { Links } from "./entity/steam/Links";
+const EntityHandlerInstance = new EntityHandler("./entity");
 
 async function configureDB(): Promise<DataSource> {
     return new Promise( async ( resolve, reject ) => {
+        const Entities: any[] = await EntityHandlerInstance.getEntities();
         const AppDataSource = new DataSource( {
             type: "mysql",
             host: appDBHost,
             username: appDBUser,
             password: appDBPassword,
             database: appDBName,
-            entities: [
-                SupportTicket,
-                StaffReport,
-                Appeal,
-                RolePermission,
-                CommandPermission,
-                AwaitingLink,
-                Links
-            ],
+            entities: Entities,
             synchronize: true,
             logging: true,
             entityPrefix: "app_",

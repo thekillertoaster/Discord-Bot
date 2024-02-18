@@ -3,3 +3,5 @@ import { SupportTicket } from "./SupportTicket";
 
 @Entity()
 export class StaffReport extends SupportTicket {}
+
+export default StaffReport;

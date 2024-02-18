@@ -17,3 +17,5 @@ export class SupportTicket {
     @Column()
     createdBy!: string
 }
+
+export default SupportTicket;

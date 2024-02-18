@@ -14,3 +14,5 @@ export class AwaitingLink {
     @Column()
     linkCode!: string
 }
+
+export default AwaitingLink;

@@ -8,3 +8,5 @@ export class CommandPermission {
     @Column()
     permissionString!: string
 }
+
+export default CommandPermission;
